@@ -42,28 +42,29 @@
 - [x] 調査レポート反映(太陽光発電導入指標の調査.md):①FIT2段階(24円×4年/8.3円×6年/以降8.5円)②補助金プリセット(なし/東京都/都+区)で初期費用控除 ③投資指標KPI(LCOE/IRR/回収期間)④損失回避フレーム(何もしない場合の25年電気代=約407万円)⑤OPEX(点検・廃棄)⑥買電単価既定30円。検証済(東京都補助でIRR9.4%/回収7.2年、無補助でIRR0.3%/回収18年)
 - [x] モバイル操作性の改善: ①iOS自動ズーム防止(input16px) ②スライダーを指で掴みやすく(つまみ拡大+両脇に−/+微調整ボタン) ③地図のスクロール詰まり/誤ズーム対策(scrollWheelZoom無効・モバイル高さ縮小) ④タップ灰色フラッシュ除去 ⑤累積収支グラフのX軸間引き ⑥タップ領域拡大(検索/トグル/候補)
 - [x] 3D影シミュレーション(Phase C・ベータ): Cesium+OSM建物で周辺を3D表示し、時刻・季節スライダーで影を可視化。影による年間発電ロスを太陽位置サンプリング×レイ遮蔽判定で推定し、発電量・回収年数に反映。遅延読み込み(Cesium非表示時はメイン画面に影響なし)。**要: 無料Cesium ionトークン(.env)**。太陽位置サンプリングは検証済(東京夏至77°/冬至31°)、3D描画とレイ判定は実機+トークンで要確認
+- [x] 3D「日当たりシミュレーション」へ進化(A+B): **A**=屋根に傾き・方位反映のパネル板を描画し、▶再生で1日の太陽が動き隣家の影がパネルを横切る。日向=オレンジ/日陰=グレーで色変化。「計算」でパネルを5×4格子に切り**年間日当たりヒートマップ**(グレー〜オレンジ)を表示=どのマスがどれだけ陽を浴びるか可視化。**B**=建物データを**PLATEAU(Cesium ion「Japan 3D Buildings」asset 2602291・全国210+市区町村)**に。読込失敗時はOSM箱型へ自動フォールバック。パネル幾何は `panelCellsENU`(shading.js・純粋関数)で単体検証済。3D描画・レイ判定の見え方は実機で要確認
 - [x] パネルの傾き・方位の反映(精度向上): GHI(水平面)→傾斜面への transposition factor を自前計算。直達は太陽位置から入射角、散乱は等方性+Hay異方性の簡易モデル。**Open-Meteoの傾斜面実測GTIで較正済み**(fd=0.38/AI=0.40/albedo=0.10、実用域=傾き10〜45°・東〜西で誤差±3%)。Controlsに傾き(0〜60°)・向き(東←南→西)スライダー+効果%の即時表示を追加。計算は `scripts/validate-tilt.mjs` で検証(南向き30°で年+12%=実測一致)
 - [x] PWA化: manifest.webmanifest + 手書きService Worker(public/sw.js)。**Cesium(13MB)と外部APIはキャッシュせず**アプリシェルのみ(navigate=ネット優先、assets=stale-while-revalidate)。アイコンはqlmanage+sipsでPNG生成(pwa-192/512・apple-touch-icon)。SWは本番ビルドのみ登録
-- [x] Vercelデプロイ準備: vercel.json(framework:vite/sw.jsをno-cache/manifestのContent-Type/assets長期キャッシュ)。.gitignoreに.env追加(トークン誤コミット防止)。**デプロイ実行はオーナーのVercelログイン+環境変数 `VITE_CESIUM_ION_TOKEN` の設定が必要**(下記手順)
-- [ ] 実機ブラウザでの最終確認: ①3D影(Cesium表示・スライダーで影が動く・ロス計算)②傾き/方位スライダーで発電量と回収年数が変わるか ③PWAインストール(`npm run preview`でSW有効。スマホでホーム画面追加)
+- [x] **Vercel本番デプロイ完了**: 公開URL → **https://solar-hiyori.vercel.app**(HTTP 200確認)。プロジェクト=`shimochaan-s-projects/solar-hiyori`。環境変数 `VITE_CESIUM_ION_TOKEN` をProduction/Developmentに登録済み(バンドルに埋め込み確認=3D動作可)。vercel.jsonのヘッダ(sw.js no-cache・manifestのContent-Type)も本番で反映確認
+- [x] Git初期化+初回コミット(main / .envは除外確認済み)
+- [ ] **GitHub連携(あと一歩・要オーナー操作)**: `gh`はインストール済みだが未認証。`gh auth login` 実行後に `gh repo create solar-hiyori --public --source=. --push` で公開可能。手順は下記
+- [ ] 実機ブラウザでの最終確認: ①3D=パネル板が屋根に出る/▶再生で影が横切る/ヒートマップ計算 ②PLATEAUが出るか(出ない地域はOSM箱型)③傾き/方位スライダーで発電量と回収年数が変わるか ④PWAインストール(スマホで https://solar-hiyori.vercel.app をホーム画面に追加)
 - [ ] 3D影の改善候補: PLATEAU LOD2(対応都市で屋根形状つき)・自前建物の自己遮蔽除外・タイル読込完了待ち・対応エリア判定
 - [ ] 次イテレーション候補(調査.md未対応): V2H(自家消費80-90%)/ソーラーローン金利と「実質月額負担」/新築・既築の足場差/PLATEAU日影・光害(=Phase C遮蔽)/防災レジリエンス/エネがえるAPI連携
 - [ ] 将来: React Native / Expo でアプリストア配信
 
-## デプロイ手順(Vercel)
-```
-# 1. Vercelにログイン(初回のみ・ブラウザが開く)
-vercel login
-# 2. プロジェクトをデプロイ(初回は対話で設定→2回目以降は1コマンド)
-cd ~/Desktop/solar-hiyori
-vercel            # プレビューURL発行
-# 3. 環境変数(Cesiumトークン)を本番に登録 ※未登録だと3Dが出ない
-vercel env add VITE_CESIUM_ION_TOKEN production   # .envの値を貼り付け
-# 4. 本番公開
-vercel --prod
-```
-※`VITE_` 付き環境変数は**ビルド時に埋め込まれる**ため、env登録後に再デプロイが必要。
-※GUI派なら: GitHubにpush → vercel.comでImport → Settingsで同名env登録、でもOK。
+## デプロイ / 公開状況
+- **本番(Vercel)**: https://solar-hiyori.vercel.app ← 公開済み・誰でもアクセス可
+  - 再デプロイ: `cd ~/Desktop/solar-hiyori && vercel --prod`(env登録済みなのでこれだけ)
+  - 環境変数 `VITE_CESIUM_ION_TOKEN` は登録済み(Production/Development)
+- **GitHub**: あと1ステップ(`gh` 認証だけオーナー操作が必要)
+  ```
+  gh auth login                 # ① ブラウザ/デバイス認証(一度だけ)
+  cd ~/Desktop/solar-hiyori
+  gh repo create solar-hiyori --public --source=. --push   # ② リポジトリ作成＋push
+  ```
+  ※コミットは作成済み(main)。.envは.gitignoreで除外済み=トークンは公開されない。
+  ※将来GitHub連携で自動デプロイにするなら vercel.com → Project → Git で接続。
 
 ## v2 構想(試作品レビュー 2026-06-12)
 プロダクトの軸を「毎日見る予報」→「土地購入の投資判断ツール」へ進化させる。
