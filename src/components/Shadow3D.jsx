@@ -78,11 +78,27 @@ export default function Shadow3D({ lat, lon, label, tiltDeg = 30, azimuthDeg = 0
       viewer.shadows = true                     // 建物が影を落とす
       viewer.clock.shouldAnimate = false        // 時刻はスライダー/再生で操作
 
+      // --- イラスト寄りの“デザインされた3D”にする ---
+      // ① 航空写真は使わず、地面をフラットな淡色に(街がごちゃつかず建物が際立つ)
+      viewer.imageryLayers.removeAll()
+      viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#e9eef3')
+      viewer.scene.globe.showGroundAtmosphere = false
+      // ② 影を濃く・やわらかく(影が「写っている」と一目で分かるように)
+      viewer.shadowMap.darkness = 0.32
+      viewer.shadowMap.softShadows = true
+      viewer.shadowMap.size = 2048
+      // ③ 空はうっすら(イラストの背景的に)
+      if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.brightnessShift = 0.2
+
+      // 建物をフラットな淡色のブロックに塗るスタイル(写真の代わりに“図”として見せる)
+      const FLAT_STYLE = new Cesium.Cesium3DTileStyle({ color: "color('#c8d3e0')" })
+
       // 【B】建物:PLATEAU(実形状)を試し、ダメならOSM(箱型)へフォールバック
       try {
         const plateau = await Cesium.Cesium3DTileset.fromIonAssetId(PLATEAU_ASSET_ID)
         if (canceled) return
         plateau.shadows = Cesium.ShadowMode.ENABLED
+        plateau.style = FLAT_STYLE
         viewer.scene.primitives.add(plateau)
         setSource('PLATEAU(実建物形状)')
       } catch {
@@ -90,6 +106,7 @@ export default function Shadow3D({ lat, lon, label, tiltDeg = 30, azimuthDeg = 0
           const osm = await Cesium.createOsmBuildingsAsync()
           if (canceled) return
           osm.shadows = Cesium.ShadowMode.ENABLED
+          osm.style = FLAT_STYLE
           viewer.scene.primitives.add(osm)
           setSource('OpenStreetMap(箱型・簡易)')
         } catch (e) {

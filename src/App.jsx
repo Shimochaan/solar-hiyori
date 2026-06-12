@@ -6,7 +6,7 @@ import {
 import {
   DEFAULTS, SIM_DEFAULTS, annualConsumptionKwh, selfConsumptionRate, annualBenefit,
   initialCost, subsidyAmount, simulateCashflow, paybackFromRows, monthlyMoney,
-  lcoe, irr, doNothingElectricityCost,
+  lcoe, irr, doNothingElectricityCost, investmentVerdict,
 } from './lib/economics'
 import AddressSearch from './components/AddressSearch'
 import MapView from './components/MapView'
@@ -15,6 +15,7 @@ import InvestmentControls from './components/InvestmentControls'
 import { ScoreCard, BrainSolarCard, AnnualCard } from './components/ResultCards'
 import { TodayCurve, MonthlyChart } from './components/Charts'
 import { PaybackCard, KpiCard, DoNothingCard, PaybackChart, MonthlyMoneyChart } from './components/PaybackSection'
+import VerdictCard from './components/VerdictCard'
 import LogicNote from './components/LogicNote'
 import { SunLogo } from './components/icons'
 
@@ -283,6 +284,35 @@ function Results({ daily, hourly, annual, settings, lastYear, shadingLoss = 0, t
   const doNothing = doNothingElectricityCost({ useKwh, buyPrice })
   const finalNet = main.rows[main.rows.length - 1].net // 25年後の最終累積収支
 
+  // ---- 結論判定:「で、置くべきか?」を一言で ----
+  const verdict = investmentVerdict({ payback: main.payback, irr: irrRate, finalNet })
+  // 効いている要因 / 改善できる点(ユーザーが次に何をいじれば良くなるか)
+  const reasons = []
+  if (settings.subsidyPreset !== 'none') {
+    reasons.push({ plus: true, text: '自治体の補助金が初期費用を大きく下げています' })
+  } else {
+    reasons.push({ plus: false, text: '補助金なしの前提。お住まいの自治体の補助を確認すると回収が一気に縮むことがあります' })
+  }
+  if (tiltGain < 0.97) {
+    reasons.push({ plus: false, text: `パネルの向き・傾きで発電量が約${Math.round((1 - tiltGain) * 100)}%目減り(南向き30°がベスト)` })
+  } else if (tiltGain >= 1.05) {
+    reasons.push({ plus: true, text: '南寄り・適切な傾きで発電量をしっかり稼げています' })
+  }
+  if (shadingLoss > 0.1) {
+    reasons.push({ plus: false, text: `周辺の建物の影で年あたり約${Math.round(shadingLoss * 100)}%の発電ロス` })
+  }
+  if (settings.hasBattery) {
+    reasons.push({ plus: false, text: '蓄電池は自家消費を増やせますが初期費用が重く、回収は伸びがちです' })
+  }
+  // サマリー文(判定レベルに応じた一言)
+  const summaryByLevel = {
+    great: `電気代の節約と売電で、設置費用を約${Number.isFinite(main.payback) ? main.payback.toFixed(0) : '—'}年で取り戻せる見込み。預金や保守的な投信より有利な“屋根の活用”です。`,
+    good: '初期費用は回収できる見込み。補助金や向きを最適化すれば、さらに前倒しできます。',
+    maybe: '25年内には元が取れますが、今の条件では旨味は控えめ。補助金・向き・容量の見直しで「置く価値あり」に届く可能性があります。',
+    no: '今の前提では25年でも初期費用を回収しきれません。補助金の確認・より南向き・容量や蓄電池の見直しで結論が変わるか試してみてください。',
+  }
+  const verdictSummary = summaryByLevel[verdict.level]
+
   // 月別の収支(例年の月別発電量から、節約+売電に分けて。売電はFIT1段階目)
   const monthlyMoneyData = monthlyMoney(monthlyData, {
     selfRate: main.selfRate, buyPrice, sellPrice: SIM_DEFAULTS.fitTier1Price, useKwh,
@@ -296,6 +326,18 @@ function Results({ daily, hourly, annual, settings, lastYear, shadingLoss = 0, t
 
   return (
     <div className="mt-8 space-y-4">
+      {/* 結論判定:年間試算が出ているときだけ、画面の一番上に大きく出す */}
+      {annual && (
+        <VerdictCard
+          verdict={verdict}
+          payback={main.payback}
+          irr={irrRate}
+          finalNet={finalNet}
+          summary={verdictSummary}
+          reasons={reasons.slice(0, 3)}
+        />
+      )}
+
       <ScoreCard score={score} todayKwh={todayKwh} todayYen={todayYen} />
 
       <div className="grid gap-4 md:grid-cols-2">
