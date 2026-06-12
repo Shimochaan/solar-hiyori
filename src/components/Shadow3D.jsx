@@ -33,6 +33,7 @@ export default function Shadow3D({ lat, lon, label, tiltDeg = 30, azimuthDeg = 0
   const containerRef = useRef(null)
   const viewerRef = useRef(null)
   const panelRef = useRef([])       // パネル格子セルのEntity配列
+  const beamRef = useRef(null)      // パネル位置の「光の柱」Entity
   const frameRef = useRef(null)     // ENU→ECEF変換の材料 {origin, rot}
   const playTimerRef = useRef(null) // 再生アニメのタイマー
   const [month, setMonth] = useState(6)
@@ -96,6 +97,43 @@ export default function Shadow3D({ lat, lon, label, tiltDeg = 30, azimuthDeg = 0
         }
       }
 
+      // 「ここが対象地」マーカー。建物に紛れて場所を見失わないように、
+      // ① 地面に貼り付くハイライト円 ② 建物の裏でも貫通して見えるピン+ラベル
+      // を置く(高さサンプリング不要なので即表示できる)。
+      const groundPos = Cesium.Cartesian3.fromDegrees(lon, lat)
+      viewer.entities.add({
+        position: groundPos,
+        ellipse: {
+          semiMinorAxis: 7, semiMajorAxis: 7,
+          material: Cesium.Color.fromCssColorString('#f97316').withAlpha(0.35),
+          outline: true, outlineColor: Cesium.Color.fromCssColorString('#f97316'),
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          classificationType: Cesium.ClassificationType.BOTH, // 地面にも建物にも貼る
+        },
+      })
+      viewer.entities.add({
+        position: groundPos,
+        point: {
+          pixelSize: 13,
+          color: Cesium.Color.fromCssColorString('#f97316'),
+          outlineColor: Cesium.Color.WHITE, outlineWidth: 3,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY, // 建物の裏でも見える
+        },
+        label: {
+          text: 'ここが対象地',
+          font: 'bold 14px sans-serif',
+          fillColor: Cesium.Color.WHITE,
+          showBackground: true,
+          backgroundColor: Cesium.Color.fromCssColorString('#ea580c').withAlpha(0.95),
+          backgroundPadding: new Cesium.Cartesian2(8, 5),
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          pixelOffset: new Cesium.Cartesian2(0, -16),
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        },
+      })
+
       // 対象の土地へ斜め上空から寄る
       viewer.camera.flyTo({
         destination: Cesium.Cartesian3.fromDegrees(lon, lat - 0.0009, 180),
@@ -124,9 +162,10 @@ export default function Shadow3D({ lat, lon, label, tiltDeg = 30, azimuthDeg = 0
   function buildPanel() {
     const viewer = viewerRef.current
     if (!viewer) return
-    // 既存パネルを片付け
+    // 既存パネル・光の柱を片付け
     panelRef.current.forEach((e) => viewer.entities.remove(e))
     panelRef.current = []
+    if (beamRef.current) { viewer.entities.remove(beamRef.current); beamRef.current = null }
 
     // 屋根の高さ:その地点の一番上(建物があれば屋根、無ければ地面)+クリアランス
     const carto = Cesium.Cartographic.fromDegrees(lon, lat)
@@ -163,6 +202,22 @@ export default function Shadow3D({ lat, lon, label, tiltDeg = 30, azimuthDeg = 0
       ent._cell = cell // 後でレイ計算に使うセル情報を持たせておく
       panelRef.current.push(ent)
     }
+
+    // パネル位置から立ち上がる「光の柱」。どの角度からでも対象地が分かる目印。
+    beamRef.current = viewer.entities.add({
+      polyline: {
+        positions: [
+          Cesium.Cartesian3.fromDegrees(lon, lat, baseH),
+          Cesium.Cartesian3.fromDegrees(lon, lat, baseH + 22),
+        ],
+        width: 6,
+        material: new Cesium.PolylineGlowMaterialProperty({
+          glowPower: 0.3,
+          color: Cesium.Color.fromCssColorString('#fb923c'),
+        }),
+      },
+    })
+
     applyLiveLighting() // 現在時刻の日向/日陰でいったん塗る
     viewer.scene.requestRender()
   }
