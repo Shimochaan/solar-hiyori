@@ -1,0 +1,95 @@
+/* Tailwind CSS v4 を読み込む(これ1行で全ユーティリティが使える) */
+@import "tailwindcss";
+
+/* ------------------------------------------------------------
+   配色トークン(クリーン×ソーラーオレンジ)
+   背景は暖かいオフホワイト、文字は読みやすいグレー、
+   アクセントは太陽のオレンジ。落ち着いた実プロダクト調。
+------------------------------------------------------------ */
+:root {
+  --bg: #fff9f0;        /* ページ背景(暖色オフホワイト) */
+  --card: #ffffff;      /* カード背景 */
+  --line: #f1ece3;      /* 細い罫線 */
+  --ink: #1f2937;       /* 見出し(ダークグレー) */
+  --ink-soft: #6b7280;  /* 本文・補足 */
+  --accent: #f97316;    /* アクセント(オレンジ) */
+}
+
+html, body, #root { margin: 0; min-height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--ink-soft);
+  font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.01em;
+}
+
+/* 共通カード:白地・細罫線・柔らかい影・丸み(グラスモーフィズムをやめる) */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04), 0 6px 16px rgba(17, 24, 39, 0.05);
+}
+
+/* セクション番号バッジ(①②③の代わりに使う小さな丸) */
+.step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------
+   モバイル操作性の最適化
+------------------------------------------------------------ */
+
+/* タップ時の灰色フラッシュを消す(ネイティブアプリ風に) */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* iOSの自動ズーム防止:入力欄のフォントが16px未満だと、
+   タップした瞬間に画面が勝手に拡大されてしまう。16pxで止める。 */
+input, select, textarea { font-size: 16px; }
+
+/* スライダーを指で掴みやすく:当たり判定を広げ、つまみを大きくする */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 1.75rem;          /* 縦の当たり判定を広げる(細い線だと押しにくい) */
+  background: transparent;
+  touch-action: pan-y;      /* 横操作=スライダー / 縦=ページスクロール、を両立 */
+  accent-color: var(--accent);
+}
+/* 線(トラック) */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 9999px; background: #e5e7eb;
+}
+input[type="range"]::-moz-range-track {
+  height: 6px; border-radius: 9999px; background: #e5e7eb;
+}
+/* つまみ(大きめの丸・白フチで視認性UP) */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  margin-top: -9px;          /* トラックの中央に合わせる */
+  width: 1.5rem; height: 1.5rem;
+  border-radius: 9999px;
+  background: var(--accent);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 1.5rem; height: 1.5rem;
+  border-radius: 9999px;
+  background: var(--accent);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  cursor: pointer;
+}
